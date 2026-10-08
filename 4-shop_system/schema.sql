@@ -17,7 +17,7 @@ CREATE TABLE customer (
     name  VARCHAR(100) NOT NULL UNIQUE,
     email VARCHAR(120) UNIQUE,
     address VARCHAR(255),
-    tier ENUM('ทั่วไป','VIP','VVIP'),
+    tier ENUM('normal','VIP','VVIP'),
     referred_by INT DEFAULT NULL, 
     FOREIGN KEY (referred_by) REFERENCES customer(cust_id) ON DELETE SET NULL
 

@@ -229,6 +229,42 @@ def delete_order(order_id):
         (order_id,)
     )
 
+# ---------- รีวิว (review) ----------
+def search_reviews(filters):    
+    sql = "SELECT * FROM review WHERE 1=1"
+    params = []
+
+    if filters.get("product_id"):
+        sql += " AND product_id = %s"
+        params.append(filters["product_id"])
+
+    if filters.get("rating"):
+        sql += " AND rating = %s"
+        params.append(filters["rating"])
+    return run_query(sql, params)
+def get_review(review_id):
+    rows = run_query(
+        "SELECT * FROM review WHERE review_id = %s",
+        (review_id,))
+    return rows[0] if rows else None
+def create_review(data):
+    return run_command(
+        "INSERT INTO review (cust_id, product_id, rating, comment, review_date) "
+        "VALUES (%s, %s, %s, %s, CURDATE())",
+        (data["cust_id"], data["product_id"], data["rating"], data.get("comment", ""))
+    )
+def update_review(review_id, data):
+    return run_command(
+        "UPDATE review SET rating=%s, comment=%s "
+        "WHERE product_id=%s AND cust_id=%s",
+        (data["rating"], data.get("comment", ""), data["product_id"], data["cust_id"])
+    )
+def delete_review(review_id):
+    return run_command(
+        "DELETE FROM review WHERE product_id = %s",
+        (review_id,)
+    )   
+
 
 # ============================================================
 #  REPORT (รายงาน — ใช้ JOIN + GROUP BY + subquery)

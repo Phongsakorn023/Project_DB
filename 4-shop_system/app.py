@@ -93,6 +93,29 @@ def order_delete(_id):
     return safe(db.delete_order, _id)
 
 
+# ---- รีวิว ----
+@app.route("/api/reviews", methods=["GET"])
+def reviews_list():
+    filters = {k: v for k, v in request.args.items() if v}
+    return safe(db.search_reviews, filters)
+
+@app.route("/api/reviews/<int:_id>", methods=["GET"])
+def review_get(_id):
+    return safe(db.get_review, _id)
+
+@app.route("/api/reviews", methods=["POST"])
+def review_create():
+    return safe(db.create_review, request.json)
+
+@app.route("/api/reviews/<int:_id>", methods=["PUT"])
+def review_update(_id):
+    return safe(db.update_review, _id, request.json)
+
+@app.route("/api/reviews/<int:_id>", methods=["DELETE"])
+def review_delete(_id):
+    return safe(db.delete_review, _id)
+
+
 @app.route("/api/reports/summary")
 def report_summary():
     return safe(db.report_summary)

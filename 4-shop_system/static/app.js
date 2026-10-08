@@ -51,9 +51,9 @@ const ENTITIES = {
         "label": "ระดับ",
         "type": "select",
         "options": [
-          "normal",
-          "vip",
-          "vvip",
+          "ทั่วไป",
+          "VIP",
+          "VVIP"
         ]
       }
     ]
@@ -154,6 +154,61 @@ const ENTITIES = {
         ]
       }
     ]
+  },
+ "reviews": {
+    "label": "รีวิว",
+    "api": "/api/reviews",
+    "idKey": "review_id",
+    "search": [
+      {
+        "key": "product_id",
+        "label": "รหัสสินค้า",
+        "type": "number"
+      },
+      {
+        "key": "rating🌟",
+        "label": "คะแนน",
+        "type": "select",
+        "options": [
+          "",
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      }
+    ],
+    "form": [
+      {
+        "key": "product_id",
+        "label": "รหัสสินค้า",
+        "type": "number"
+      },
+      {
+        "key": "cust_id",
+        "label": "รหัสลูกค้า",
+        "type": "number"
+      },
+      {
+        "key": "rating",
+        "label": "คะแนน",
+        "type": "select",
+        "options": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      {
+        "key": "comment",
+        "label": "ความคิดเห็น",
+        "type": "text"
+    
+      }
+    ]
   }
 };
 
@@ -239,6 +294,16 @@ function openForm(title, data = {}) {
   $("#modalTitle").textContent = title;
   $("#formFields").innerHTML = cfg.form.map(f => fieldHtml(f, "f_", data[f.key])).join("");
   $("#modal").classList.remove("hidden");
+
+  // พิมพ์ชื่อเสร็จแล้วกด @ จะเติม example.com ให้ทันที
+  const emailInput = document.getElementById("f_email");
+  if (emailInput) {
+    emailInput.addEventListener("input", (e) => {
+      if (e.data === "@" && emailInput.value.endsWith("@")) {
+        emailInput.value += "example.com";
+      }
+    });
+  }
 }
 function collectForm() { const cfg = ENTITIES[current], d = {}; cfg.form.forEach(f => d[f.key] = $("#f_" + f.key).value); return d; }
 async function editRow(id) {
