@@ -1,302 +1,137 @@
-
 -- ============================================================
--- schema.sql : ฐานข้อมูลร้านค้าออนไลน์
--- ใช้สร้างตารางและเพิ่มข้อมูลตัวอย่างสำหรับทดสอบระบบ
+--  schema.sql — ร้านค้าออนไลน์ (นิสิตออกแบบและเขียนเอง)
+--  กติกา: 1 ออเดอร์มีหลายสินค้า (M:N: order × product ผ่าน order_line),
+--         รีวิว = M:N (customer × product), การชำระเงิน 1:M จาก shop_order
 -- ============================================================
-
-
--- 1. ลบตารางเก่าก่อนสร้างใหม่
--- ต้องลบตารางลูกก่อน เพราะตารางลูกอาจอ้างอิงตารางแม่อยู่
--- DROP TABLE IF EXISTS หมายถึง ถ้ามีตารางนี้อยู่ ให้ลบทิ้ง
--- ระวัง! คำสั่งนี้ลบข้อมูลเดิมในตารางด้วย
-
-DROP TABLE IF EXISTS payment;
-DROP TABLE IF EXISTS review;
-DROP TABLE IF EXISTS order_line;
-DROP TABLE IF EXISTS shop_order;
-DROP TABLE IF EXISTS product;
+/*
 DROP TABLE IF EXISTS customer;
+DROP TABLE IF EXISTS product;
+DROP TABLE IF EXISTS shop_orderr;
+DROP TABLE IF EXIST  review;
+DROP TABLE IF EXISTS payment;
+*/
 
-
--- ============================================================
--- 2. สร้างตารางลูกค้า (customer)
--- เก็บข้อมูลลูกค้าที่สมัครหรือซื้อสินค้าจากร้าน
--- ============================================================
 
 CREATE TABLE customer (
-    -- รหัสลูกค้า เป็น PK และให้ระบบสร้างเลขอัตโนมัติ
     cust_id INT AUTO_INCREMENT PRIMARY KEY,
-
-    -- ชื่อลูกค้า ห้ามว่าง และห้ามซ้ำกัน
-    name VARCHAR(100) NOT NULL UNIQUE,
-
-    -- อีเมล ยาวไม่เกิน 120 ตัวอักษร และห้ามซ้ำกัน
-    -- ไม่ใส่ NOT NULL จึงสามารถเว้นว่างได้
+    name  VARCHAR(100) NOT NULL UNIQUE,
     email VARCHAR(120) UNIQUE,
-
-    -- ที่อยู่ลูกค้า ยาวไม่เกิน 255 ตัวอักษร
     address VARCHAR(255),
+    tier ENUM('ทั่วไป','VIP','VVIP'),
+    referred_by INT DEFAULT NULL, 
+    FOREIGN KEY (referred_by) REFERENCES customer(cust_id) ON DELETE SET NULL
 
-    -- ระดับสมาชิก เลือกได้เฉพาะ 4 ระดับที่กำหนด
-    -- ถ้าไม่ระบุ จะตั้งเป็น Classic โดยอัตโนมัติ
-    tier ENUM('Classic', 'Silver', 'Gold', 'Premium')
-        NOT NULL DEFAULT 'Classic',
+    -- TODO: name, email, address, tier  
+); 
 
-    -- รหัสลูกค้าที่แนะนำลูกค้าคนนี้
-    -- อนุญาตให้เป็น NULL ได้ หมายถึงไม่มีผู้แนะนำ
-    referred_by INT DEFAULT NULL,
-
-    -- FK เชื่อม referred_by กับ cust_id ในตารางเดียวกัน
-    -- ถ้าลูกค้าที่แนะนำถูกลบ ให้ referred_by กลายเป็น NULL
-    -- ถ้า cust_id เปลี่ยน รหัสที่อ้างอิงจะเปลี่ยนตาม
-    FOREIGN KEY (referred_by)
-        REFERENCES customer(cust_id)
-        ON DELETE SET NULL
-        ON UPDATE CASCADE
-);
-
-
--- ============================================================
--- สร้างตารางสินค้า (product)
--- เก็บรายละเอียดสินค้า ราคา และจำนวนสินค้าในสต็อก
--- ============================================================
-
+    
 CREATE TABLE product (
-    -- รหัสสินค้า เป็น PK และสร้างเลขอัตโนมัติ
     product_id INT AUTO_INCREMENT PRIMARY KEY,
-
-    -- ชื่อสินค้า ห้ามว่างและห้ามซ้ำกัน
-    name VARCHAR(100) NOT NULL UNIQUE,
-
-    -- ประเภทสินค้า เลือกได้เฉพาะเสื้อ กางเกง หรือรองเท้า
-    category ENUM('เสื้อ', 'กางเกง', 'รองเท้า') NOT NULL,
-
-    -- ราคาสินค้า รองรับตัวเลขทศนิยม 2 ตำแหน่ง
-    -- CHECK ป้องกันราคาเป็นค่าติดลบ
-    price DECIMAL(10,2) NOT NULL CHECK (price >= 0),
-
-    -- จำนวนสินค้าในสต็อก ค่าเริ่มต้นเป็น 0
-    -- CHECK ป้องกันจำนวนสินค้าเป็นค่าติดลบ
-    stock INT NOT NULL DEFAULT 0 CHECK (stock >= 0)
+    
+    name VARCHAR(100) not NULL UNIQUE,
+    category VARCHAR(100),
+    price DECIMAL(10,2),
+    stock INT
+-- TODO: name, category, price, stock
 );
-
-
--- ============================================================
--- สร้างตารางคำสั่งซื้อ (shop_order)
--- เก็บข้อมูลว่าใครสั่งซื้อ เมื่อไหร่ และมีสถานะอะไร
--- ============================================================
 
 CREATE TABLE shop_order (
-    -- รหัสออเดอร์ เป็น PK และสร้างเลขอัตโนมัติ
     order_id INT AUTO_INCREMENT PRIMARY KEY,
-
-    -- รหัสลูกค้าที่เป็นเจ้าของออเดอร์
     cust_id INT NOT NULL,
-
-    -- วันที่สั่งซื้อ ถ้าไม่ระบุจะใช้วันที่ปัจจุบัน
-    order_date DATE NOT NULL DEFAULT (CURRENT_DATE),
-
-    -- สถานะออเดอร์ เลือกได้เฉพาะค่าที่กำหนด
-    -- ค่าเริ่มต้นคือ รอดำเนินการ
-    status ENUM(
-        'รอดำเนินการ',
-        'ชำระเงินแล้ว',
-        'จัดส่งแล้ว',
-        'ยกเลิก'
-    ) NOT NULL DEFAULT 'รอดำเนินการ',
-
-    -- FK เชื่อมออเดอร์กับลูกค้าที่มีอยู่จริง
-    -- ON DELETE RESTRICT ห้ามลบลูกค้าที่ยังมีออเดอร์อ้างถึง
-    -- ON UPDATE CASCADE ถ้าเปลี่ยนรหัสลูกค้า ให้เปลี่ยนตาม
-    FOREIGN KEY (cust_id)
-        REFERENCES customer(cust_id)
-        ON DELETE RESTRICT
-        ON UPDATE CASCADE
+    order_date DATE NOT NULL,
+    status VARCHAR(30) NOT NULL,
+    FOREIGN KEY (cust_id) REFERENCES customer(cust_id)
+    -- TODO: cust_id (FK), order_date, status
 );
 
+-- M:N: shop_order × product
+-- TODO: order_id (FK), product_id (FK), qty, unit_price ; PRIMARY KEY (order_id, product_id)
 
--- ============================================================
--- สร้างตารางรายการสินค้าในออเดอร์ (order_line)
--- ใช้เชื่อมออเดอร์กับสินค้า และเก็บจำนวนกับราคาต่อชิ้น
--- ============================================================
-
-CREATE TABLE order_line (
-    -- รหัสออเดอร์ที่รายการสินค้านี้สังกัดอยู่
+CREATE TABLE order_line (        
     order_id INT NOT NULL,
-
-    -- รหัสสินค้าที่อยู่ในออเดอร์
     product_id INT NOT NULL,
-
-    -- จำนวนสินค้าที่สั่ง ต้องมากกว่า 0
-    qty INT NOT NULL CHECK (qty > 0),
-
-    -- ราคาต่อชิ้น ณ เวลาที่สั่งซื้อ ห้ามติดลบ
-    unit_price DECIMAL(10,2) NOT NULL CHECK (unit_price >= 0),
-
-    -- PK แบบผสม ใช้ order_id และ product_id ร่วมกัน
-    -- ป้องกันการเพิ่มสินค้าชนิดเดิมซ้ำเป็นหลายแถวในออเดอร์เดียวกัน
+    qty INT NOT NULL,
+    unit_price DECIMAL(10,2) NOT NULL,
     PRIMARY KEY (order_id, product_id),
-
-    -- ถ้าลบออเดอร์ ให้ลบรายการสินค้าของออเดอร์นั้นตามไปด้วย
-    -- แต่ถ้าเปลี่ยนรหัสออเดอร์ ให้เปลี่ยนตาม
-    FOREIGN KEY (order_id)
-        REFERENCES shop_order(order_id)
-        ON DELETE CASCADE
-        ON UPDATE CASCADE,
-
-    -- ห้ามลบสินค้าที่ยังถูกใช้อยู่ในรายการออเดอร์
-    -- ถ้าเปลี่ยนรหัสสินค้า ให้เปลี่ยนตาม
-    FOREIGN KEY (product_id)
-        REFERENCES product(product_id)
-        ON DELETE RESTRICT
-        ON UPDATE CASCADE
+    FOREIGN KEY (order_id) REFERENCES shop_order(order_id),
+    FOREIGN KEY (product_id) REFERENCES product(product_id)
 );
-
-
--- ============================================================
--- สร้างตารางรีวิว (review)
--- เก็บคะแนนและความคิดเห็นของลูกค้าที่มีต่อสินค้า
--- ============================================================
 
 CREATE TABLE review (
-    -- ลูกค้าที่เขียนรีวิว
     cust_id INT NOT NULL,
-
-    -- สินค้าที่ถูกรีวิว
     product_id INT NOT NULL,
-
-    -- คะแนนรีวิว ต้องอยู่ระหว่าง 1 ถึง 5
-    rating INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
-
-    -- ข้อความรีวิว ไม่เกิน 255 ตัวอักษร
+    rating INT NOT NULL,
     comment VARCHAR(255),
-
-    -- วันที่รีวิว ถ้าไม่ระบุจะใช้วันที่ปัจจุบัน
-    review_date DATE NOT NULL DEFAULT (CURRENT_DATE),
-
-    -- PK แบบผสม ป้องกันลูกค้าคนเดิมรีวิวสินค้าชิ้นเดิมซ้ำ
+    review_date DATE NOT NULL,
     PRIMARY KEY (cust_id, product_id),
-
-    -- ถ้าลบลูกค้า ให้ลบรีวิวของลูกค้าคนนั้นด้วย
-    -- ถ้าเปลี่ยนรหัสลูกค้า ให้เปลี่ยนตาม
-    FOREIGN KEY (cust_id)
-        REFERENCES customer(cust_id)
-        ON DELETE CASCADE
-        ON UPDATE CASCADE,
-
-    -- ถ้าลบสินค้า ให้ลบรีวิวของสินค้านั้นด้วย
-    -- ถ้าเปลี่ยนรหัสสินค้า ให้เปลี่ยนตาม
-    FOREIGN KEY (product_id)
-        REFERENCES product(product_id)
-        ON DELETE CASCADE
-        ON UPDATE CASCADE
+    FOREIGN KEY (cust_id) REFERENCES customer(cust_id),
+    FOREIGN KEY (product_id) REFERENCES product(product_id)
 );
-
-
--- ============================================================
--- สร้างตารางการชำระเงิน (payment)
--- เก็บวิธีชำระเงิน ยอดเงิน และวันที่ชำระ
--- ============================================================
-
-CREATE TABLE payment (
-    -- รหัสการชำระเงิน เป็น PK และสร้างเลขอัตโนมัติ
+    
+CREATE TABLE payment (  
     payment_id INT AUTO_INCREMENT PRIMARY KEY,
-
-    -- รหัสออเดอร์ที่มีการชำระเงิน
     order_id INT NOT NULL,
-
-    -- วิธีชำระเงิน เลือกได้เฉพาะค่าที่กำหนด
-    method ENUM('โอนเงิน', 'บัตรเครดิต', 'พร้อมเพย์', 'เงินสด')
-        NOT NULL,
-
-    -- จำนวนเงินที่ชำระ ห้ามติดลบ
-    amount DECIMAL(10,2) NOT NULL CHECK (amount >= 0),
-
-    -- วันที่ชำระเงิน ถ้าไม่ระบุจะใช้วันที่ปัจจุบัน
-    paid_date DATE NOT NULL DEFAULT (CURRENT_DATE),
-
-    -- เชื่อมการชำระเงินกับออเดอร์
-    -- ถ้าลบออเดอร์ ให้ลบข้อมูลการชำระเงินที่เกี่ยวข้องด้วย
-    -- ถ้าเปลี่ยนรหัสออเดอร์ ให้เปลี่ยนตาม
-    FOREIGN KEY (order_id)
-        REFERENCES shop_order(order_id)
-        ON DELETE CASCADE
-        ON UPDATE CASCADE
+    method VARCHAR(50) NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    paid_date DATE NOT NULL,
+    FOREIGN KEY (order_id) REFERENCES shop_order(order_id)
 );
 
+    -- TODO: INSERT ข้อมูลตัวอย่างทุกตาราง
+    -- insert customer
 
--- ============================================================
--- 3. เพิ่มข้อมูลตัวอย่าง (INSERT)
--- ใช้ทดสอบว่าตารางและความสัมพันธ์ทำงานได้
--- ============================================================
+INSERT INTO customer (name, email, address, tier)
+VALUES
+('IU', 'iu@example.com', 'โซล', 'VIP'),
+('Kim Soo-hyun', 'kimsoohyun@example.com', 'โซล', 'VIP'),
+('Park Bo-gum', 'parkbogum@example.com', 'โซล', 'VIP'),
+('Song Joong-ki', 'songjoongki@example.com', 'แดจอน', 'VIP'),
+('Bae Suzy', 'suzy@example.com', 'กวางจู', 'ทั่วไป');
 
+-- INSERT product
+INSERT INTO product (name, category, price, stock)
+VALUES
+('IU Album', 'เพลง', 599.00, 20),
+('Kim Soo-hyun Drama Box Set', 'ซีรีส์', 899.00, 10),
+('Park Bo-gum Photo Book', 'หนังสือ', 499.00, 15),
+('Song Joong-ki Poster', 'ของสะสม', 299.00, 25),
+('Suzy Album', 'เพลง', 599.00, 18);
 
--- เพิ่มข้อมูลลูกค้า 6 คน
--- ไม่ระบุ cust_id เพราะระบบสร้างให้อัตโนมัติ
-INSERT INTO customer (name, email, address, tier) VALUES
-('IU', 'iu@example.com', 'โซล', 'Classic'),
-('Kim Soo-hyun', 'kimsoohyun@example.com', 'โซล', 'Silver'),
-('Park Bo-gum', 'parkbogum@example.com', 'โซล', 'Silver'),
-('Song Joong-ki', 'songjoongki@example.com', 'แดจอน', 'Gold'),
-('Bae Suzy', 'suzy@example.com', 'กวางจู', 'Premium'),
-('Han So-hee', 'hansohee@example.com', 'ปูซาน', 'Classic');
-
-
--- เพิ่มสินค้า 8 รายการ
--- product_id จะถูกสร้างให้อัตโนมัติ
-INSERT INTO product (name, category, price, stock) VALUES
-('Adidas Originals T-Shirt', 'เสื้อ', 1200.00, 20),
-('Nike Sportswear Club Fleece', 'เสื้อ', 1800.00, 15),
-('The North Face Windbreaker', 'เสื้อ', 3500.00, 10),
-('Nike Dri-FIT Pants', 'กางเกง', 1500.00, 25),
-('Adidas Track Pants', 'กางเกง', 2200.00, 18),
-('New Balance 530', 'รองเท้า', 3900.00, 30),
-('Nike Air Force 1', 'รองเท้า', 3700.00, 12),
-('Adidas Ultraboost', 'รองเท้า', 6500.00, 8);
-
-
--- เพิ่มออเดอร์ 6 รายการ
--- cust_id ต้องเป็นรหัสที่มีอยู่จริงในตาราง customer
--- order_id จะถูกสร้างให้อัตโนมัติ
-INSERT INTO shop_order (cust_id, order_date, status) VALUES
+-- insert shop_order
+INSERT INTO shop_order (cust_id, order_date, status)
+VALUES
 (1, '2026-09-29', 'ชำระเงินแล้ว'),
 (2, '2026-09-29', 'จัดส่งแล้ว'),
 (3, '2026-09-29', 'รอดำเนินการ'),
 (4, '2026-09-30', 'ชำระเงินแล้ว'),
-(5, '2026-09-30', 'จัดส่งแล้ว'),
-(6, '2026-09-30', 'ยกเลิก');
+(5, '2026-09-30', 'จัดส่งแล้ว');
 
+-- insert order_line 
 
--- เพิ่มรายการสินค้าของแต่ละออเดอร์
--- ลำดับข้อมูลคือ order_id, product_id, qty, unit_price
--- ตัวอย่าง: (3, 4, 2, 1500) หมายถึง
--- ออเดอร์ 3 ซื้อสินค้า 4 จำนวน 2 ชิ้น ราคาชิ้นละ 1,500 บาท
-INSERT INTO order_line (order_id, product_id, qty, unit_price) VALUES
-(1, 1, 1, 1200.00),
-(2, 6, 1, 3900.00),
-(3, 4, 2, 1500.00),
-(4, 3, 1, 3500.00),
-(5, 7, 1, 3700.00),
-(6, 2, 1, 1800.00);
+INSERT INTO order_line (order_id, product_id, qty, unit_price)
+VALUES
+(1, 1, 1, 599.00),
+(2, 2, 1, 899.00),
+(3, 3, 2, 499.00),
+(4, 4, 1, 299.00),
+(5, 5, 1, 599.00);
 
+-- insert review 
 
--- เพิ่มรีวิวจากลูกค้า
--- แต่ละแถวระบุรหัสลูกค้า สินค้า คะแนน ความคิดเห็น และวันที่
--- คะแนนต้องอยู่ระหว่าง 1 ถึง 5
-INSERT INTO review (cust_id, product_id, rating, comment, review_date) VALUES
-(1, 1, 5, 'เสื้อเนื้อผ้าดีมาก ใส่สบาย', '2026-09-29'),
-(2, 6, 5, 'รองเท้าคุณภาพดี เดินไม่ปวดเท้า คุ้มราคา', '2026-09-29'),
-(3, 4, 4, 'กางเกงทรงสวย พอดีตัว', '2026-09-29'),
-(4, 3, 5, 'เสื้อกันลมได้ดีเยี่ยม สินค้าแท้แน่นอน', '2026-09-30'),
-(5, 7, 5, 'รองเท้าสวยถูกใจมากครับ', '2026-09-30');
+INSERT INTO review (cust_id, product_id, rating, comment, review_date)
+VALUES
+(1, 1, 5, 'ชอบมาก', '2026-09-29'),
+(2, 2, 5, 'สินค้าน่าสนใจ', '2026-09-29'),
+(3, 3, 4, 'คุณภาพดี', '2026-09-29'),
+(4, 4, 5, 'ของสะสมสวยมาก', '2026-09-30'),
+(5, 5, 5, 'ชอบเพลงมาก', '2026-09-30');
 
+-- insert payment 
 
--- เพิ่มข้อมูลการชำระเงิน
--- แต่ละรายการต้องอ้างอิง order_id ที่มีอยู่ใน shop_order
--- ตัวอย่าง: ออเดอร์ 1 ชำระด้วยการโอนเงิน 1,200 บาท
-INSERT INTO payment (order_id, method, amount, paid_date) VALUES
-(1, 'โอนเงิน', 1200.00, '2026-09-29'),
-(2, 'บัตรเครดิต', 3900.00, '2026-09-29'),
-(3, 'พร้อมเพย์', 3000.00, '2026-09-29'),
-(4, 'เงินสด', 3500.00, '2026-09-30'),
-(5, 'พร้อมเพย์', 3700.00, '2026-09-30');
+INSERT INTO payment (order_id, method, amount, paid_date)
+VALUES
+(1, 'โอนเงิน', 599.00, '2026-09-29'),
+(2, 'บัตรเครดิต', 899.00, '2026-09-29'),
+(3, 'พร้อมเพย์', 998.00, '2026-09-29'),
+(4, 'โอนเงิน', 299.00, '2026-09-30'),
+(5, 'พร้อมเพย์', 599.00, '2026-09-30');

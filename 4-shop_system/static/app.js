@@ -24,10 +24,9 @@ const ENTITIES = {
         "type": "select",
         "options": [
           "",
-          "Classic",
-          "Silver",
-          "Gold",
-          "premium"
+          "ทั่วไป",
+          "VIP",
+          "VVIP"
         ]
       }
     ],
@@ -51,12 +50,10 @@ const ENTITIES = {
         "key": "tier",
         "label": "ระดับ",
         "type": "select",
-        "optios": [
-          "",
-          "Classic",
-          "Silver",
-          "Gold",
-          "premium"
+        "options": [
+          "ทั่วไป",
+          "VIP",
+          "VVIP"
         ]
       }
     ]
@@ -77,9 +74,10 @@ const ENTITIES = {
         "type": "select",
         "options": [
           "",
-          "เสื้อ",
-          "กางเกง",
-          "รองเท้า"
+          "เพลง" ,
+          "หนัง" ,
+          "ซีรีส์" ,
+          "ของสะสม" 
         ]
       }
     ],
@@ -157,61 +155,6 @@ const ENTITIES = {
         ]
       }
     ]
-  },
- "reviews": {
-    "label": "รีวิว",
-    "api": "/api/reviews",
-    "idKey": "review_id",
-    "search": [
-      {
-        "key": "product_id",
-        "label": "รหัสสินค้า",
-        "type": "number"
-      },
-      {
-        "key": "rating",
-        "label": "คะแนน",
-        "type": "select",
-        "options": [
-          "",
-          { value : "5", label : "🌟🌟🌟🌟🌟(5)" },
-          { value : "4", label : "🌟🌟🌟🌟(4)" },
-          { value : "3", label : "🌟🌟🌟(3)" },
-          { value : "2", label : "🌟🌟(2)" },
-          { value : "1", label : "🌟(1)" } 
-        ] 
-      }
-    ],
-    "form": [
-      {
-        "key": "product_id",
-        "label": "รหัสสินค้า",
-        "type": "number"
-      },
-      {
-        "key": "cust_id",
-        "label": "รหัสลูกค้า",
-        "type": "number"
-      },
-      {
-        "key": "rating",
-        "label": "คะแนน",
-        "type": "select",
-        "options": [
-          { value : "5", label : "🌟🌟🌟🌟🌟(5)" },
-          { value : "4", label : "🌟🌟🌟🌟(4)" },
-          { value : "3", label : "🌟🌟🌟(3)" },
-          { value : "2", label : "🌟🌟(2)" },
-          { value : "1", label : "🌟(1)" }
-        ]
-      },
-      {
-        "key": "comment",
-        "label": "ความคิดเห็น",
-        "type": "text"
-    
-      }
-    ]
   }
 };
 
@@ -221,31 +164,14 @@ const $ = (s) => document.querySelector(s);
 function setStatus(el, msg, cls = "") { el.className = "status " + cls; el.textContent = msg; }
 async function api(url, opts) { const res = await fetch(url, opts); return res.json(); }
 
-
 function fieldHtml(f, prefix, value = "") {
   let input;
-
   if (f.type === "select") {
     input = '<select id="' + prefix + f.key + '">' +
-      f.options.map(o => {
-        const optValue = typeof o === "object" ? o.value : o;
-        const optLabel = typeof o === "object" ? o.label : (o || "ทั้งหมด");
-
-        return '<option value="' + optValue + '"' +
-          (String(optValue) === String(value) ? " selected" : "") +
-          '>' + optLabel + '</option>';
-      }).join("") +
-      '</select>';
-  } else {
-    input = '<input id="' + prefix + f.key +
-      '" type="' + f.type +
-      '" value="' + (value ?? "") + '">';
-  }
-
-  return '<div class="field"><label>' + f.label +
-    '</label>' + input + '</div>';
+      f.options.map(o => '<option value="' + o + '"' + (o === value ? " selected" : "") + '>' + (o || "ทั้งหมด") + '</option>').join("") + '</select>';
+  } else { input = '<input id="' + prefix + f.key + '" type="' + f.type + '" value="' + (value ?? "") + '">'; }
+  return '<div class="field"><label>' + f.label + '</label>' + input + '</div>';
 }
-
 // ── LIVE SEARCH ──────────────────────────────────────────────
 // debounce คือ "รอให้หยุดพิมก่อน แล้วค่อยยิง"
 // เช่น พิม g-o-y อย่างรวดเร็ว → จะ search แค่ครั้งเดียว (ตอนหยุดพิม 350ms)
@@ -292,42 +218,16 @@ async function doSearch() {
       body.style.opacity = "1";                      // 5. fade in
     });
   });
-}  
+}
 function renderTable(r) {
   const head = $("#tableHead"), body = $("#tableBody"), st = $("#status");
-  head.innerHTML = "";
-  body.innerHTML = "";
-
-  if (!r.ok) {
-    setStatus(st, (r.todo ? "🚧 " : "⚠️ ") + r.error, r.todo ? "todo" : "err");
-    return;
-  }
-
+  head.innerHTML = ""; body.innerHTML = "";
+  if (!r.ok) { setStatus(st, (r.todo ? "🚧 " : "⚠️ ") + r.error, r.todo ? "todo" : "err"); return; }
   const rows = r.data || [];
-  if (rows.length === 0) {
-    setStatus(st, "ไม่พบข้อมูล");
-    return;
-  }
-
+  if (rows.length === 0) { setStatus(st, "ไม่พบข้อมูล"); return; }
   setStatus(st, "พบ " + rows.length + " รายการ");
-
-  let cols;
-
-  if (current === "orders") {
-    cols = [
-      "order_id",
-      "cust_id",
-      "order_date",
-      "รายการสินค้า",
-      "ยอดรวม",
-      "status"
-    ].filter(c => c in rows[0]);
-  } else {
-    cols = Object.keys(rows[0]);
-  }
-
+  const cols = Object.keys(rows[0]);
   head.innerHTML = cols.map(c => "<th>" + c + "</th>").join("") + "<th>จัดการ</th>";
-
   body.innerHTML = rows.map(row => {
     const id = row[ENTITIES[current].idKey];
     return "<tr>" + cols.map(c => "<td>" + (row[c] ?? "—") + "</td>").join("") +
@@ -335,15 +235,12 @@ function renderTable(r) {
       '<button class="btn sm del" onclick="deleteRow(' + id + ')">ลบ</button></td></tr>';
   }).join("");
 }
-
-
 function openForm(title, data = {}) {
   const cfg = ENTITIES[current];
   $("#modalTitle").textContent = title;
   $("#formFields").innerHTML = cfg.form.map(f => fieldHtml(f, "f_", data[f.key])).join("");
   $("#modal").classList.remove("hidden");
 
-  // พิมพ์ชื่อเสร็จแล้วกด @ จะเติม example.com ให้ทันที
   const emailInput = document.getElementById("f_email");
   if (emailInput) {
     emailInput.addEventListener("input", (e) => {

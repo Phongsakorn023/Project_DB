@@ -79,11 +79,11 @@ def create_customer(data):
 #     # # _todo("update_customer")
 
 def update_customer(cust_id, data):
-    return run_command(
+     return run_command(
         "UPDATE customer SET name=%s, email=%s, "
         "address=%s, tier=%s WHERE cust_id=%s",
         (data["name"], data["email"],
-        data["address"], data["tier"], cust_id))
+         data["address"], data["tier"], cust_id))
 
 
     # """ลบ ลูกค้า ตาม cust_id"""
@@ -95,6 +95,7 @@ def delete_customer(cust_id):
 
 
 # ---------- สินค้า (product) ----------
+ 
     """ค้นหา สินค้า ตามเงื่อนไข (name, category)
     คำใบ้: เริ่มจาก sql = "SELECT * FROM product WHERE 1=1"
     แล้วต่อเงื่อนไขเฉพาะ filter ที่มีค่า (ข้อความใช้ LIKE %s, อื่น ๆ ใช้ = %s)"""
@@ -102,17 +103,17 @@ def delete_customer(cust_id):
     # _todo("search_products")
 
 def search_products(filters): 
-
+ 
     sql = "SELECT * FROM product WHERE 1=1"
     params = []
 
     if filters.get("name"):
-        sql += " AND name LIKE %s"
-        params.append("%" + filters["name"] + "%")
+     sql += " AND name LIKE %s"
+     params.append("%" + filters["name"] + "%")
 
     if filters.get("category"):
-        sql += " AND category = %s"
-    params.append(filters["category"])
+     sql += " AND category = %s"
+     params.append(filters["category"])
     return run_query(sql, params)
     
 
@@ -149,7 +150,8 @@ def update_product(product_id, data):
         "UPDATE product SET name=%s, category=%s, "
         "price=%s, stock=%s WHERE product_id=%s",
         (data["name"], data["category"],
-        data["price"], data["stock"], product_id) )
+         data["price"], data["stock"], product_id)
+    )
 
 
 
@@ -169,39 +171,20 @@ def delete_product(product_id):
     # แล้วต่อเงื่อนไขเฉพาะ filter ที่มีค่า (ข้อความใช้ LIKE %s, อื่น ๆ ใช้ = %s)"""
     # # TODO: เขียน SQL ค้นหาแบบยืดหยุ่นตาม filters (ใช้ %s เสมอ)
     # _todo("search_orders")
-
 def search_orders(filters):
-    sql = """
-        SELECT
-            so.cust_id,
-            so.order_date,
-            so.order_id,
-            so.status,
-            GROUP_CONCAT(
-                CONCAT(p.name, ' x ', ol.qty)
-                SEPARATOR ', '
-            ) AS รายการสินค้า,
-            COALESCE(SUM(ol.qty * ol.unit_price), 0) AS ยอดรวม
-        FROM shop_order so
-        LEFT JOIN order_line ol ON so.order_id = ol.order_id
-        LEFT JOIN product p ON ol.product_id = p.product_id
-        WHERE 1=1
-    """
+    sql = "SELECT * FROM shop_order WHERE 1=1"
     params = []
 
+    # ค้นหาตามรหัสลูกค้า (ตัวเลข ใช้ = %s)
     if filters.get("cust_id"):
-        sql += " AND so.cust_id = %s"
+        sql += " AND cust_id = %s"
         params.append(filters["cust_id"])
 
+    # ค้นหาตามสถานะ เช่น pending, shipped
     if filters.get("status"):
-        sql += " AND so.status = %s"
+        sql += " AND status = %s"
         params.append(filters["status"])
-
-    sql += """
-        GROUP BY so.order_id, so.cust_id, so.order_date, so.status
-        ORDER BY so.order_id
-    """
-
+        
     return run_query(sql, params)
 
 
@@ -245,42 +228,6 @@ def delete_order(order_id):
         "DELETE FROM shop_order WHERE order_id =%s",
         (order_id,)
     )
-
-# ---------- รีวิว (review) ----------
-def search_reviews(filters):    
-    sql = "SELECT * FROM review WHERE 1=1"
-    params = []
-
-    if filters.get("product_id"):
-        sql += " AND product_id = %s"
-        params.append(filters["product_id"])
-
-    if filters.get("rating"):
-        sql += " AND rating = %s"
-        params.append(filters["rating"])
-    return run_query(sql, params)
-def get_review(review_id):
-    rows = run_query(
-        "SELECT * FROM review WHERE review_id = %s",
-        (review_id,))
-    return rows[0] if rows else None
-def create_review(data):
-    return run_command(
-        "INSERT INTO review (cust_id, product_id, rating, comment, review_date) "
-        "VALUES (%s, %s, %s, %s, CURDATE())",
-        (data["cust_id"], data["product_id"], data["rating"], data.get("comment", ""))
-    )
-def update_review(review_id, data):
-    return run_command(
-        "UPDATE review SET rating=%s, comment=%s "
-        "WHERE product_id=%s AND cust_id=%s",
-        (data["rating"], data.get("comment", ""), data["product_id"], data["cust_id"])
-    )
-def delete_review(review_id):
-    return run_command(
-        "DELETE FROM review WHERE product_id = %s",
-        (review_id,)
-    )   
 
 
 # ============================================================
