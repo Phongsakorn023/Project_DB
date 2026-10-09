@@ -14,6 +14,9 @@
 
 DB_HOST = "localhost"               # TODO: host ที่อาจารย์แจกให้
 DB_USER = "root"                     # TODO: username ของนิสิต
-DB_PASSWORD = "iloveroblox67"                 # TODO: password ของนิสิต
+
+DB_PASSWORD = "pongsakorn1234"                 # TODO: password ของนิสิต
+#DB_PASSWORD = "iloveroblox67"                 # TODO: password ของนิสิต
+
 DB_NAME = "project0"              # TODO: ชื่อฐานข้อมูลของนิสิต
 DB_PORT = 3306
