@@ -1,137 +1,118 @@
 -- ============================================================
---  schema.sql — ร้านค้าออนไลน์ (นิสิตออกแบบและเขียนเอง)
---  กติกา: 1 ออเดอร์มีหลายสินค้า (M:N: order × product ผ่าน order_line),
---         รีวิว = M:N (customer × product), การชำระเงิน 1:M จาก shop_order
+--  schema.sql — ร้านค้าออนไลน์ (ปรับปรุง FK Actions และ Default Values)
 -- ============================================================
-/*
-DROP TABLE IF EXISTS customer;
-DROP TABLE IF EXISTS product;
-DROP TABLE IF EXISTS shop_orderr;
-DROP TABLE IF EXIST  review;
-DROP TABLE IF EXISTS payment;
-*/
 
+-- 1. ลบตารางเก่าทิ้งตามลำดับความสัมพันธ์ (ตารางลูกไปตารางแม่)
+DROP TABLE IF EXISTS payment;
+DROP TABLE IF EXISTS review;
+DROP TABLE IF EXISTS order_line;
+DROP TABLE IF EXISTS shop_order;
+DROP TABLE IF EXISTS product;
+DROP TABLE IF EXISTS customer;
+
+-- 2. สร้างตารางพร้อมกำหนด PK, FK และ constraints ให้ครบถ้วน
 
 CREATE TABLE customer (
     cust_id INT AUTO_INCREMENT PRIMARY KEY,
-    name  VARCHAR(100) NOT NULL UNIQUE,
+    name VARCHAR(100) NOT NULL UNIQUE,
     email VARCHAR(120) UNIQUE,
     address VARCHAR(255),
-    tier ENUM('normal','VIP','VVIP'),
-    referred_by INT DEFAULT NULL, 
-    FOREIGN KEY (referred_by) REFERENCES customer(cust_id) ON DELETE SET NULL
-
-    -- TODO: name, email, address, tier  
+    tier ENUM('ทั่วไป', 'VIP', 'VVIP') NOT NULL DEFAULT 'ทั่วไป',
+    referred_by INT DEFAULT NULL,
+    FOREIGN KEY (referred_by) REFERENCES customer(cust_id) ON DELETE SET NULL ON UPDATE CASCADE
 ); 
 
-    
 CREATE TABLE product (
     product_id INT AUTO_INCREMENT PRIMARY KEY,
-    
-    name VARCHAR(100) not NULL UNIQUE,
-    category VARCHAR(100),
-    price DECIMAL(10,2),
-    stock INT
--- TODO: name, category, price, stock
+    name VARCHAR(100) NOT NULL UNIQUE,
+    category ENUM('เสื้อ', 'กางเกง', 'รองเท้า') NOT NULL,
+    price DECIMAL(10,2) NOT NULL CHECK (price >= 0),
+    stock INT NOT NULL DEFAULT 0 CHECK (stock >= 0) -- ป้องกันสต็อกติดลบจากการตัดสต็อก
 );
 
 CREATE TABLE shop_order (
     order_id INT AUTO_INCREMENT PRIMARY KEY,
     cust_id INT NOT NULL,
-    order_date DATE NOT NULL,
-    status VARCHAR(30) NOT NULL,
-    FOREIGN KEY (cust_id) REFERENCES customer(cust_id)
-    -- TODO: cust_id (FK), order_date, status
+    order_date DATE NOT NULL DEFAULT (CURRENT_DATE), -- กำหนดวันที่ปัจจุบันอัตโนมัติ
+    status ENUM('รอดำเนินการ', 'ชำระเงินแล้ว', 'จัดส่งแล้ว', 'ยกเลิก') NOT NULL DEFAULT 'รอดำเนินการ',
+    FOREIGN KEY (cust_id) REFERENCES customer(cust_id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
-
--- M:N: shop_order × product
--- TODO: order_id (FK), product_id (FK), qty, unit_price ; PRIMARY KEY (order_id, product_id)
 
 CREATE TABLE order_line (        
     order_id INT NOT NULL,
     product_id INT NOT NULL,
-    qty INT NOT NULL,
-    unit_price DECIMAL(10,2) NOT NULL,
+    qty INT NOT NULL CHECK (qty > 0),
+    unit_price DECIMAL(10,2) NOT NULL CHECK (unit_price >= 0),
     PRIMARY KEY (order_id, product_id),
-    FOREIGN KEY (order_id) REFERENCES shop_order(order_id),
-    FOREIGN KEY (product_id) REFERENCES product(product_id)
+    FOREIGN KEY (order_id) REFERENCES shop_order(order_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES product(product_id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 CREATE TABLE review (
     cust_id INT NOT NULL,
     product_id INT NOT NULL,
-    rating INT NOT NULL,
+    rating INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
     comment VARCHAR(255),
-    review_date DATE NOT NULL,
+    review_date DATE NOT NULL DEFAULT (CURRENT_DATE),
     PRIMARY KEY (cust_id, product_id),
-    FOREIGN KEY (cust_id) REFERENCES customer(cust_id),
-    FOREIGN KEY (product_id) REFERENCES product(product_id)
+    FOREIGN KEY (cust_id) REFERENCES customer(cust_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES product(product_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
     
 CREATE TABLE payment (  
     payment_id INT AUTO_INCREMENT PRIMARY KEY,
     order_id INT NOT NULL,
-    method VARCHAR(50) NOT NULL,
-    amount DECIMAL(10,2) NOT NULL,
-    paid_date DATE NOT NULL,
-    FOREIGN KEY (order_id) REFERENCES shop_order(order_id)
+    method ENUM('โอนเงิน', 'บัตรเครดิต', 'พร้อมเพย์', 'เงินสด') NOT NULL,
+    amount DECIMAL(10,2) NOT NULL CHECK (amount >= 0),
+    paid_date DATE NOT NULL DEFAULT (CURRENT_DATE),
+    FOREIGN KEY (order_id) REFERENCES shop_order(order_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
-    -- TODO: INSERT ข้อมูลตัวอย่างทุกตาราง
-    -- insert customer
+-- ============================================================
+-- 3. INSERT ข้อมูลตัวอย่างสำหรับทดสอบ
+-- ============================================================
 
-INSERT INTO customer (name, email, address, tier)
-VALUES
+INSERT INTO customer (name, email, address, tier) VALUES
 ('IU', 'iu@example.com', 'โซล', 'VIP'),
 ('Kim Soo-hyun', 'kimsoohyun@example.com', 'โซล', 'VIP'),
 ('Park Bo-gum', 'parkbogum@example.com', 'โซล', 'VIP'),
 ('Song Joong-ki', 'songjoongki@example.com', 'แดจอน', 'VIP'),
 ('Bae Suzy', 'suzy@example.com', 'กวางจู', 'ทั่วไป');
 
--- INSERT product
-INSERT INTO product (name, category, price, stock)
-VALUES
-('IU Album', 'เพลง', 599.00, 20),
-('Kim Soo-hyun Drama Box Set', 'ซีรีส์', 899.00, 10),
-('Park Bo-gum Photo Book', 'หนังสือ', 499.00, 15),
-('Song Joong-ki Poster', 'ของสะสม', 299.00, 25),
-('Suzy Album', 'เพลง', 599.00, 18);
+INSERT INTO product (name, category, price, stock) VALUES
+('Adidas Originals T-Shirt', 'เสื้อ', 1200.00, 20),
+('Nike Sportswear Club Fleece', 'เสื้อ', 1800.00, 15),
+('The North Face Windbreaker', 'เสื้อ', 3500.00, 10),
+('Nike Dri-FIT Pants', 'กางเกง', 1500.00, 25),
+('Adidas Track Pants', 'กางเกง', 2200.00, 18),
+('New Balance 530', 'รองเท้า', 3900.00, 30),
+('Nike Air Force 1', 'รองเท้า', 3700.00, 12),
+('Adidas Ultraboost', 'รองเท้า', 6500.00, 8);
 
--- insert shop_order
-INSERT INTO shop_order (cust_id, order_date, status)
-VALUES
+INSERT INTO shop_order (cust_id, order_date, status) VALUES
 (1, '2026-09-29', 'ชำระเงินแล้ว'),
 (2, '2026-09-29', 'จัดส่งแล้ว'),
 (3, '2026-09-29', 'รอดำเนินการ'),
 (4, '2026-09-30', 'ชำระเงินแล้ว'),
 (5, '2026-09-30', 'จัดส่งแล้ว');
 
--- insert order_line 
+INSERT INTO order_line (order_id, product_id, qty, unit_price) VALUES
+(1, 1, 1, 1200.00),
+(2, 6, 1, 3900.00),
+(3, 4, 2, 1500.00),
+(4, 3, 1, 3500.00),
+(5, 7, 1, 3700.00);
 
-INSERT INTO order_line (order_id, product_id, qty, unit_price)
-VALUES
-(1, 1, 1, 599.00),
-(2, 2, 1, 899.00),
-(3, 3, 2, 499.00),
-(4, 4, 1, 299.00),
-(5, 5, 1, 599.00);
+INSERT INTO review (cust_id, product_id, rating, comment, review_date) VALUES
+(1, 1, 5, 'เสื้อเนื้อผ้าดีมาก ใส่สบาย', '2026-09-29'),
+(2, 6, 5, 'รองเท้าคุณภาพดี เดินไม่ปวดเท้า คุ้มราคา', '2026-09-29'),
+(3, 4, 4, 'กางเกงทรงสวย พอดีตัว', '2026-09-29'),
+(4, 3, 5, 'เสื้อกันลมได้ดีเยี่ยม สินค้าแท้แน่นอน', '2026-09-30'),
+(5, 7, 5, 'รองเท้าสวยถูกใจมากครับ', '2026-09-30');
 
--- insert review 
-
-INSERT INTO review (cust_id, product_id, rating, comment, review_date)
-VALUES
-(1, 1, 5, 'ชอบมาก', '2026-09-29'),
-(2, 2, 5, 'สินค้าน่าสนใจ', '2026-09-29'),
-(3, 3, 4, 'คุณภาพดี', '2026-09-29'),
-(4, 4, 5, 'ของสะสมสวยมาก', '2026-09-30'),
-(5, 5, 5, 'ชอบเพลงมาก', '2026-09-30');
-
--- insert payment 
-
-INSERT INTO payment (order_id, method, amount, paid_date)
-VALUES
-(1, 'โอนเงิน', 599.00, '2026-09-29'),
-(2, 'บัตรเครดิต', 899.00, '2026-09-29'),
-(3, 'พร้อมเพย์', 998.00, '2026-09-29'),
-(4, 'โอนเงิน', 299.00, '2026-09-30'),
-(5, 'พร้อมเพย์', 599.00, '2026-09-30');
+INSERT INTO payment (order_id, method, amount, paid_date) VALUES
+(1, 'โอนเงิน', 1200.00, '2026-09-29'),
+(2, 'บัตรเครดิต', 3900.00, '2026-09-29'),
+(3, 'พร้อมเพย์', 3000.00, '2026-09-29'),
+(4, 'เงินสด', 3500.00, '2026-09-30'),
+(5, 'พร้อมเพย์', 3700.00, '2026-09-30');
