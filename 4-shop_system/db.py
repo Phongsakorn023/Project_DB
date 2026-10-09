@@ -80,9 +80,9 @@ def create_customer(data):
 
 def update_customer(cust_id, data):
      return run_command(
-        "UPDATE member SET name=%s,  email=%s, "
+        "UPDATE customer SET name=%s, email=%s, "
         "address=%s, tier=%s WHERE cust_id=%s",
-        (data["name"],data["email"],
+        (data["name"], data["email"],
          data["address"], data["tier"], cust_id))
 
 

@@ -51,7 +51,7 @@ const ENTITIES = {
         "label": "ระดับ",
         "type": "select",
         "options": [
-          "ทั่วไป",
+          "Normal",
           "VIP",
           "VVIP"
         ]
@@ -74,10 +74,9 @@ const ENTITIES = {
         "type": "select",
         "options": [
           "",
-          "เพลง" ,
-          "หนัง" ,
-          "ซีรีส์" ,
-          "ของสะสม" 
+          "เสื้อ",
+          "กางเกง",
+          "รองเท้า"
         ]
       }
     ],
@@ -92,12 +91,9 @@ const ENTITIES = {
         "label": "หมวดหมู่",
         "type": "select",
         "options": [
-          "",
-          "เพลง" ,
-          "หนัง" ,
-          "ซีรีส์" ,
-          "ของสะสม" 
-    
+          "เสื้อ",
+          "กางเกง",
+          "รองเท้า"
         ]
       },
       {
@@ -128,8 +124,10 @@ const ENTITIES = {
         "type": "select",
         "options": [
           "",
-          "pending",
-          "shipped"
+          "รอดำเนินการ",
+          "ชำระเงินแล้ว",
+          "จัดส่งแล้ว",
+          "ยกเลิก"
         ]
       }
     ],
@@ -149,8 +147,10 @@ const ENTITIES = {
         "label": "สถานะ",
         "type": "select",
         "options": [
-          "pending",
-          "shipped"
+          "รอดำเนินการ",
+          "ชำระเงินแล้ว",
+          "จัดส่งแล้ว",
+          "ยกเลิก"
         ]
       }
     ]

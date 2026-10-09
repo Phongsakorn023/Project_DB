@@ -1,9 +1,17 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap');
+
 :root{
   --navy:#1B2A52; --navy2:#2A3F73; --coral:#EF5B4C; --gold:#F4B731;
   --ink:#1B2A52; --mute:#6A7798; --line:#DBE2F0; --tint:#F2F5FB; --green:#2FA968;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:"Segoe UI",Tahoma,sans-serif;background:#EEF2F8;color:var(--ink)}
+body{
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Noto Sans Thai", "SF Pro Text", "Sukhumvit Set", "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: #EEF2F8;
+  color: var(--ink);
+}
 
 .topbar{display:flex;align-items:center;justify-content:space-between;
   background:var(--navy);color:#fff;padding:14px 28px}
